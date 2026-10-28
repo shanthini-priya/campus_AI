@@ -123,7 +123,7 @@ function applyTheme(theme, persist = false) {
   document.documentElement.setAttribute("data-theme", next);
 
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", next === "dark" ? "#0c0917" : "#f5f2fc");
+  if (meta) meta.setAttribute("content", next === "dark" ? "#0B0713" : "#f5f2fc");
 
   if (dom.themeQuickToggle) {
     const label = next === "dark" ? "Switch to light mode" : "Switch to dark mode";
@@ -561,12 +561,25 @@ function hideTypingIndicator() {
 
 function scrollChatToBottom(behavior = "smooth") {
   if (!dom.chatScroll) return;
-  window.requestAnimationFrame(() => {
-    dom.chatScroll.scrollTo({
-      top: dom.chatScroll.scrollHeight,
-      behavior: prefersReducedMotion() ? "auto" : behavior
-    });
-  });
+
+  const shouldAnimate = behavior === "smooth" && !prefersReducedMotion();
+  const scroll = () => {
+    if (!dom.chatScroll) return;
+    const top = dom.chatScroll.scrollHeight;
+    if (shouldAnimate && typeof dom.chatScroll.scrollTo === "function") {
+      try {
+        dom.chatScroll.scrollTo({ top, behavior: "smooth" });
+        return;
+      } catch (error) {
+        /* fall through to instant scroll */
+      }
+    }
+    dom.chatScroll.scrollTop = top;
+  };
+
+  window.requestAnimationFrame(scroll);
+  window.setTimeout(scroll, 60);
+  window.setTimeout(scroll, 180);
 }
 
 function updateChatUI() {
@@ -617,7 +630,8 @@ function addMessageToConversation(message) {
   state.messages.push(message);
   dom.messages.appendChild(createMessageElement(message));
   updateChatUI();
-  scrollChatToBottom();
+  scrollChatToBottom("auto");
+  setTimeout(() => scrollChatToBottom("auto"), 100);
 }
 
 async function sendMessage(rawText) {
@@ -650,7 +664,8 @@ async function sendMessage(rawText) {
   updateSendState();
   updateChatUI();
   showTypingIndicator();
-  scrollChatToBottom();
+  scrollChatToBottom("auto");
+  setTimeout(() => scrollChatToBottom("auto"), 150);
 
   let reply;
   try {
@@ -889,9 +904,12 @@ function bindEvents() {
     });
   }
 
+  /* Keep the explicit user choice stable; only follow the OS while the user
+     has never chosen a theme. The app defaults to dark. */
   const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
   const handleSystemTheme = (event) => {
-    if (!getStoredTheme()) applyTheme(event.matches ? "dark" : "light", false);
+    if (getStoredTheme()) return;
+    applyTheme(event.matches ? "dark" : "light", false);
   };
   if (typeof systemTheme.addEventListener === "function") {
     systemTheme.addEventListener("change", handleSystemTheme);

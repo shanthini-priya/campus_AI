@@ -13,15 +13,16 @@
   <script>
     /* Apply the saved theme before paint to prevent a flash of the wrong theme. */
     (function () {
+      var theme = 'dark';
       try {
         var saved = localStorage.getItem('kce-campusai-theme') || localStorage.getItem('campusai-theme');
-        var theme = saved === 'light' || saved === 'dark'
-          ? saved
-          : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-        document.documentElement.setAttribute('data-theme', theme);
+        if (saved === 'light' || saved === 'dark') theme = saved;
       } catch (error) {
-        document.documentElement.setAttribute('data-theme', 'light');
+        /* localStorage unavailable: keep the dark default. */
       }
+      document.documentElement.setAttribute('data-theme', theme);
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', theme === 'dark' ? '#0B0713' : '#f5f2fc');
     })();
   </script>
   <link rel="stylesheet" href="style.css" />
